@@ -1,8 +1,9 @@
 from telegram import Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import Application, CommandHandler, ContextTypes
 import requests
 from bs4 import BeautifulSoup
 from config import BOT_API_TOKEN
+import os
 
 # Function to collect links from the specified webpage
 def collect_links(url):
@@ -11,46 +12,59 @@ def collect_links(url):
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         links = [a['href'] for a in soup.find_all('a', href=True)]
-        return links
+        
+        # Filter links that contain 'torrent' in the URL
+        torrent_links = [link for link in links if 'torrent' in link.lower()]
+        return torrent_links
     except Exception as e:
         return [f"Error: {e}"]
 
+# Function to save links to a .txt file
+def save_links_to_file(links, filename='links.txt'):
+    try:
+        with open(filename, 'w') as file:
+            for link in links:
+                file.write(link + "\n")
+    except Exception as e:
+        print(f"Error saving links to file: {e}")
+
 # Start command handler
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Welcome! Send me a URL, and I'll fetch the links for you.")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Welcome! Send me a URL, and I'll fetch the torrent links for you.")
 
 # Link collector command handler
-def get_links(update: Update, context: CallbackContext):
+async def get_links(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
-        update.message.reply_text("Please provide a URL. Example: /links https://example.com")
+        await update.message.reply_text("Please provide a URL. Example: /links https://example.com")
         return
-    
+
     url = context.args[0]
-    update.message.reply_text(f"Fetching links from: {url}")
+    await update.message.reply_text(f"Fetching torrent links from: {url}")
+    
     links = collect_links(url)
     
     if links:
-        message = "\n".join(links[:10])  # Send up to 10 links
-        update.message.reply_text(f"Here are the links:\n{message}")
+        # Save filtered torrent links to a .txt file
+        save_links_to_file(links)
+        
+        # Send the file back to the user
+        with open('links.txt', 'rb') as file:
+            await update.message.reply_document(file, filename="torrent_links.txt")
     else:
-        update.message.reply_text("No links found or an error occurred.")
+        await update.message.reply_text("No torrent links found or an error occurred.")
 
 # Main function to start the bot
 def main():
-    if not BOT_API_TOKEN:
-        print("Error: Bot token not found.")
-        return
-
-    updater = Updater(BOT_API_TOKEN)
+    # Create the application object
+    application = Application.builder().token(BOT_API_TOKEN).build()
 
     # Add command handlers
-    updater.dispatcher.add_handler(CommandHandler("start", start))
-    updater.dispatcher.add_handler(CommandHandler("links", get_links))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("links", get_links))
 
     # Start the bot
-    updater.start_polling()
     print("Bot is running...")
-    updater.idle()
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
