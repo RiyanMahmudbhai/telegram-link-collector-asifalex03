@@ -1,4 +1,8 @@
 
+# TG Link Collector Bot
+
+A Telegram bot that collects and filters links from a given URL. This guide explains how to deploy the bot on a VPS.
+
 ## Features
 
 - Collects all links from a provided webpage.
@@ -6,124 +10,157 @@
 - Saves the filtered links to a `.txt` file.
 - Sends the `.txt` file back to the user.
 
-## Requirements
+## Prerequisites
 
-- Python 3.8+ (preferably)
-- A Telegram Bot Token (from [BotFather](https://core.telegram.org/bots#botfather))
-- Dependencies in `requirements.txt`
+1. A VPS with Linux installed (e.g., Ubuntu 20.04 or later).
+2. Python 3.8 or higher installed on the VPS.
+3. A Telegram Bot API token. You can obtain this by creating a bot through [BotFather](https://core.telegram.org/bots#botfather).
 
-## Installation Guide
+---
+
+## Deployment Steps
 
 ### 1. Clone the Repository
 
-First, clone the repository to your local machine or VPS:
-
+Log in to your VPS and clone the bot's repository:
 ```bash
-git clone https://github.com/telegram-link-collector-asifalex03
-cd telegram-link-collector-asifalex03
+sudo apt update
+sudo apt install git -y
+git clone https://github.com/your-username/telegram-link-collector.git
+cd telegram-link-collector
 ```
 
-### 2. Create a Virtual Environment (Optional but Recommended)
+---
 
-It's recommended to use a virtual environment to manage the dependencies:
+### 2. Install Python and Virtual Environment
 
+Ensure Python is installed:
+```bash
+sudo apt install python3 python3-pip python3-venv -y
+```
+
+Set up a virtual environment:
 ```bash
 python3 -m venv venv
-source venv/bin/activate  # On Linux or MacOS
-venv\Scripts\activate     # On Windows
+source venv/bin/activate
 ```
+
+---
 
 ### 3. Install Dependencies
 
-Install the required Python packages using `pip`:
-
+Install the required Python packages:
 ```bash
 pip install -r requirements.txt
 ```
 
+---
+
 ### 4. Set Up Your Bot Token
 
-**Important**: Do **not** commit your bot token to GitHub for security reasons.
+Create a `.env` file in the project directory to store your bot token securely:
+```bash
+nano .env
+```
+Add the following content to the file:
+```
+BOT_API_TOKEN=your_telegram_bot_token
+```
+Replace `your_telegram_bot_token` with your actual bot token.
 
-1. **Create a `.env` file** in the project directory with your bot token. Here's an example `.env` file content:
-
-    ```plaintext
-    BOT_API_TOKEN=your_telegram_bot_token
-    ```
-
-2. The bot will read the token from this `.env` file when it runs.
-
-**Note**: Make sure you add the `.env` file to the `.gitignore` file to avoid pushing it to GitHub. You can do this by adding `.env` to your `.gitignore` file like this:
-
-```plaintext
-.env
+**Important:** Add `.env` to `.gitignore` to prevent it from being pushed to the repository:
+```bash
+echo ".env" >> .gitignore
 ```
 
-### 5. Run the Bot
+---
 
-To start the bot, run the following command:
+### 5. Test the Bot
 
+Run the bot to ensure it works correctly:
 ```bash
 python3 telegram_link_bot.py
 ```
-
-The bot will now be running and ready to receive commands.
-
-### 6. Deploy on VPS
-
-To deploy on a VPS, follow these steps:
-
-1. **Clone the repository** to your VPS.
-2. **Install Python** and **set up a virtual environment** (if not already set up).
-3. **Set up the `.env` file** with your bot token on the VPS.
-4. **Run the bot** using the command:
-    
-    ```bash
-    python3 telegram_link_bot.py
-    ```
-
-If you need the bot to run continuously, you can use tools like **`screen`**, **`tmux`**, or **`systemd`** to keep it running in the background.
+If the bot starts successfully, press `Ctrl+C` to stop it and proceed with setting up the service.
 
 ---
 
-## Commands
+### 6. Create a Systemd Service File
 
-### `/start`
-Sends a welcome message and explains how to use the bot.
+Create a `systemd` service file to run the bot continuously:
+```bash
+sudo nano /etc/systemd/system/tg_link_collector.service
+```
 
-### `/links <URL>`
-Fetches all links from the provided URL, filters links that contain "torrent", saves them to a `.txt` file, and sends it back to the user.
+Add the following content:
+```ini
+[Unit]
+Description=TG Link Collector Bot
+After=network.target
 
-Example:
+[Service]
+ExecStart=/usr/bin/python3 /path/to/telegram-link-collector/telegram_link_bot.py
+WorkingDirectory=/path/to/telegram-link-collector
+Restart=always
+User=root
 
-```plaintext
-/links https://telegra.ph/WZ-ML-X-Torrent-Search-01-09-35
+[Install]
+WantedBy=multi-user.target
+```
+Replace `/path/to/telegram-link-collector` with the actual path to the bot directory (use `pwd` to find the path).
+
+---
+
+### 7. Reload and Enable the Service
+
+Reload the `systemd` daemon and start the service:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl start tg_link_collector
+```
+
+Enable the service to start on boot:
+```bash
+sudo systemctl enable tg_link_collector
+```
+
+Check the service status:
+```bash
+sudo systemctl status tg_link_collector
 ```
 
 ---
 
-## Contributing
+### 8. Logs and Debugging
 
-Feel free to fork this repository and contribute to it. If you find bugs or have ideas for improvements, please open an issue or submit a pull request.
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-### **Important Notes:**  
-
-1. **Sensitive Info**: The bot token should **never be pushed to GitHub**. Store it in a `.env` file, which you can ignore in Git using `.gitignore`.
-2. **`.gitignore`**: Make sure `.env` is added to `.gitignore` so that you don’t accidentally share your bot token or other secrets.
-
-Here’s an example of a `.gitignore` file that ignores sensitive files:
-
-```plaintext
-# Ignore the environment file where sensitive information is stored
-.env
+To view logs for the bot service:
+```bash
+sudo journalctl -u tg_link_collector.service
 ```
 
 ---
+
+### 9. Stopping and Restarting the Bot
+
+To stop the bot:
+```bash
+sudo systemctl stop tg_link_collector
+```
+
+To restart the bot:
+```bash
+sudo systemctl restart tg_link_collector
+```
+
+---
+
+## Additional Notes
+
+1. Always keep your `.env` file secure and avoid committing it to version control.
+2. Use `screen` or `tmux` for manual testing if necessary.
+3. To deploy multiple bots, create separate `systemd` service files with unique names.
+
+---
+
+Enjoy using the TG Link Collector Bot!
+
