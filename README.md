@@ -19,8 +19,8 @@
 First, clone the repository to your local machine or VPS:
 
 ```bash
-git clone https://github.com/yourusername/telegram-link-collector.git
-cd telegram-link-collector
+git clone https://github.com/telegram-link-collector-asifalex03
+cd telegram-link-collector-asifalex03
 ```
 
 ### 2. Create a Virtual Environment (Optional but Recommended)
